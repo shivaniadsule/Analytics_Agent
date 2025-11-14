@@ -1,0 +1,11 @@
+## BUSINESS LOGIC
+
+### DATA HANDLING RULES
+- Handle NULL values appropriately with COALESCE or IS NOT NULL
+- Use appropriate data types (numbers for amounts, dates for temporal data)
+
+### QUERY STANDARDS
+- Always use LIMIT to prevent excessive data returns (default 1000)
+- Use meaningful column aliases for clarity
+- Add ORDER BY for sorted results
+- Use WHERE clauses for filtering

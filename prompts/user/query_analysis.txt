@@ -1,0 +1,3 @@
+Query: "{query}"
+
+Analyze this query and return the JSON response.

@@ -1,0 +1,7 @@
+Original Query: "{query}"
+
+Analysis Results: {analysis}
+
+Generate an optimized SQL query. Include:
+1. The SQL query in ```sql code block
+2. Brief explanation

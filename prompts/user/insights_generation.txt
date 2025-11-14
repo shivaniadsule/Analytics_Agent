@@ -1,0 +1,6 @@
+Generate insights and recommendations from the data.
+
+Focus on:
+- What the data reveals
+- Key trends or patterns
+- Actionable recommendations
