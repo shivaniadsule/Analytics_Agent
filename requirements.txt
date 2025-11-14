@@ -1,12 +1,3 @@
 flask==3.0.0
    pandas==2.1.4
    requests==2.31.0
-```
-
-2. **Create `.gitignore`**
-   - Tells Git what NOT to upload
-   - Secrets, large files, etc.
-```
-   .env
-   *.sqlite
-   __pycache__/
