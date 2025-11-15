@@ -4,16 +4,17 @@ import sqlite3
 from pathlib import Path
 import pandas as pd
 
-CSV_PATH = Path("transactions_data.csv")      # <- your file
+CSV_PATH = Path("transactions_data.csv")
 DB_PATH  = Path("kaggle_transactions.sqlite")
-TABLE    = "transactions"                    # change if you like
-CHUNKSIZE = 200_000                          # lower if memory is tight
+TABLE    = "transactions"
+CHUNKSIZE = 200_000
+MAX_ROWS = 300_000  # ← Limit to 1 million rows
 
 def clean_columns(cols):
     out = []
     for c in cols:
         c = str(c).strip().lower()
-        c = re.sub(r"[^\w]+", "_", c)        # spaces, punctuation -> _
+        c = re.sub(r"[^\w]+", "_", c)
         c = re.sub(r"_+", "_", c).strip("_")
         if not c: c = "col"
         out.append(c)
@@ -50,68 +51,111 @@ def create_helpful_indexes(conn, table, cols):
 def main():
     assert CSV_PATH.exists(), f"CSV not found: {CSV_PATH}"
 
+    print(f"\n{'='*60}")
+    print(f"📊 Creating database with most recent {MAX_ROWS:,} rows")
+    print(f"{'='*60}\n")
+
     # Sample first to detect columns & choose parsers
     sample = pd.read_csv(CSV_PATH, nrows=5000)
     sample.columns = clean_columns(sample.columns)
 
+    # Find date column for sorting
     parse_dates = [c for c in sample.columns if likely_datetime(c)]
-    # read in chunks with lightweight coercion
-    first = True
-    total = 0
+    date_column = parse_dates[0] if parse_dates else None
+    
+    if date_column:
+        print(f"📅 Found date column: {date_column}")
+        print(f"🔄 Will sort by {date_column} DESC to get most recent data\n")
+    else:
+        print("⚠️  No date column found, will take first 1M rows\n")
 
+    # Read entire CSV (sorted by date)
+    print("📖 Reading CSV file...")
+    df = pd.read_csv(
+        CSV_PATH,
+        parse_dates=parse_dates if parse_dates else None,
+        dtype_backend="pyarrow"
+    )
+    
+    # Clean column names
+    df.columns = clean_columns(df.columns)
+    
+    print(f"✅ Total rows in CSV: {len(df):,}")
+    
+    # Sort by date (most recent first) if date column exists
+    if date_column and date_column in df.columns:
+        print(f"🔄 Sorting by {date_column} DESC...")
+        df = df.sort_values(by=date_column, ascending=False)
+    
+    # Take only the most recent MAX_ROWS
+    if len(df) > MAX_ROWS:
+        print(f"✂️  Limiting to most recent {MAX_ROWS:,} rows...")
+        df = df.head(MAX_ROWS)
+    
+    print(f"📊 Final dataset: {len(df):,} rows\n")
+    
+    # Data cleaning
+    print("🧹 Cleaning data...")
+    
+    # Strip string columns, turn blanks into None
+    for c in df.select_dtypes(include="string").columns:
+        df[c] = df[c].str.strip()
+        df[c] = df[c].replace({"": None})
+    
+    # Numeric coercion for amount-like fields
+    for c in df.columns:
+        if likely_numeric(c):
+            df[c] = df[c].astype("string")
+            df[c] = df[c].str.replace(r"[^\d\.\-]", "", regex=True)
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    
+    # Create database
+    print("💾 Writing to SQLite database...")
     conn = sqlite3.connect(DB_PATH)
-
+    
     # Speed up bulk load
     conn.execute("PRAGMA journal_mode = OFF;")
     conn.execute("PRAGMA synchronous = OFF;")
     conn.execute("PRAGMA temp_store = MEMORY;")
     conn.execute("PRAGMA locking_mode = EXCLUSIVE;")
-
-    for chunk in pd.read_csv(
-        CSV_PATH,
-        chunksize=CHUNKSIZE,
-        parse_dates=[c for c in parse_dates if c in sample.columns],
-        dtype_backend="pyarrow"  # keeps memory in check & good types
-    ):
-        # column cleanup
-        chunk.columns = clean_columns(chunk.columns)
-
-        # strip string columns, turn blanks into None
-        for c in chunk.select_dtypes(include="string").columns:
-            chunk[c] = chunk[c].str.strip()
-            chunk[c] = chunk[c].replace({"": None})
-
-        # numeric coercion for amount-like fields
-        for c in chunk.columns:
-
-            if likely_numeric(c):
-        # Make sure we're working with strings
-                chunk[c] = chunk[c].astype("string")
-
-        # Remove currency symbols, commas, spaces, etc.
-                chunk[c] = chunk[c].str.replace(r"[^\d\.\-]", "", regex=True)
-
-        # Convert to actual numbers; invalid ones become NaN
-                chunk[c] = pd.to_numeric(chunk[c], errors="coerce")
-
-
-        # dump to sqlite
-        chunk.to_sql(TABLE, conn, if_exists="replace" if first else "append", index=False)
-        total += len(chunk)
-        first = False
-        print(f"Loaded {total:,} rows...", end="\r")
-
-    print(f"\n✅ Done. Wrote {total:,} rows to {DB_PATH} (table '{TABLE}').")
-
-    # Helpful indexes
-    cols = sample.columns.tolist()
+    
+    # Write to database
+    df.to_sql(TABLE, conn, if_exists="replace", index=False, chunksize=CHUNKSIZE)
+    
+    print(f"✅ Wrote {len(df):,} rows to {DB_PATH}")
+    
+    # Create indexes
+    print("\n🔍 Creating indexes...")
+    cols = df.columns.tolist()
     create_helpful_indexes(conn, TABLE, cols)
-
+    
     # Analyze DB for query planner
     conn.execute("ANALYZE;")
     conn.commit()
     conn.close()
-    print("✅ Indexes created and ANALYZE run.")
+    
+    # Show database size
+    db_size_mb = os.path.getsize(DB_PATH) / (1024 * 1024)
+    
+    print("\n" + "="*60)
+    print("✅ Database created successfully!")
+    print("="*60)
+    print(f"📁 Database file: {DB_PATH}")
+    print(f"📊 Total rows: {len(df):,}")
+    print(f"💾 Database size: {db_size_mb:.2f} MB")
+    
+    if date_column and date_column in df.columns:
+        print(f"📅 Date range:")
+        print(f"   Most recent: {df[date_column].max()}")
+        print(f"   Oldest: {df[date_column].min()}")
+    
+    print("="*60)
+    
+    # Warning if still too big for GitHub
+    if db_size_mb > 90:
+        print("\n⚠️  WARNING: Database is still > 90 MB")
+        print("   GitHub limit is 100 MB")
+        print(f"   Consider reducing MAX_ROWS to ~{int(MAX_ROWS * 90 / db_size_mb):,}")
 
 if __name__ == "__main__":
     main()
