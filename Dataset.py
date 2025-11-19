@@ -8,7 +8,7 @@ CSV_PATH = Path("transactions_data.csv")
 DB_PATH  = Path("kaggle_transactions.sqlite")
 TABLE    = "transactions"
 CHUNKSIZE = 200_000
-MAX_ROWS = 300_000  # ← Limit to 1 million rows
+MAX_ROWS = 300_000  
 
 def clean_columns(cols):
     out = []

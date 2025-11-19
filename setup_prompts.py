@@ -27,7 +27,7 @@ You should:
 - Be concise but comprehensive
 - Explain your reasoning
 - Highlight key findings""")
-    print("✅ Created: prompts/system/system_prompt.txt")
+    print(" Created: prompts/system/system_prompt.txt")
     
     # 2. Business Logic
     with open("prompts/system/business_logic.txt", "w") as f:
@@ -42,7 +42,7 @@ You should:
 - Use meaningful column aliases for clarity
 - Add ORDER BY for sorted results
 - Use WHERE clauses for filtering""")
-    print("✅ Created: prompts/system/business_logic.txt")
+    print(" Created: prompts/system/business_logic.txt")
     
     # 3. Query Analysis Prompt
     with open("prompts/system/query_analysis.txt", "w") as f:
@@ -70,7 +70,7 @@ Types:
 - general: general information queries
 
 Return ONLY the JSON object, no additional text.""")
-    print("✅ Created: prompts/system/query_analysis.txt")
+    print(" Created: prompts/system/query_analysis.txt")
     
     # 4. SQL Generation Prompt
     with open("prompts/system/sql_generation.txt", "w") as f:
@@ -101,7 +101,7 @@ Safety:
 - Never use DROP, DELETE, TRUNCATE, ALTER, CREATE, INSERT, UPDATE
 
 Format: Put SQL in ```sql code block, then briefly explain the query.""")
-    print("✅ Created: prompts/system/sql_generation.txt")
+    print(" Created: prompts/system/sql_generation.txt")
     
     # 5. Insights Generation Prompt
     with open("prompts/system/insights_generation.txt", "w") as f:
@@ -121,7 +121,7 @@ Generate insights:
 4. Note any interesting findings
 
 Keep response concise but informative. Focus on business value.""")
-    print("✅ Created: prompts/system/insights_generation.txt")
+    print(" Created: prompts/system/insights_generation.txt")
     
     # ========== USER PROMPTS ==========
     
@@ -130,7 +130,7 @@ Keep response concise but informative. Focus on business value.""")
         f.write("""Query: "{query}"
 
 Analyze this query and return the JSON response.""")
-    print("✅ Created: prompts/user/query_analysis.txt")
+    print(" Created: prompts/user/query_analysis.txt")
     
     # 7. User SQL Generation
     with open("prompts/user/sql_generation.txt", "w") as f:
@@ -141,7 +141,7 @@ Analysis Results: {analysis}
 Generate an optimized SQL query. Include:
 1. The SQL query in ```sql code block
 2. Brief explanation""")
-    print("✅ Created: prompts/user/sql_generation.txt")
+    print(" Created: prompts/user/sql_generation.txt")
     
     # 8. User Insights Generation
     with open("prompts/user/insights_generation.txt", "w") as f:
@@ -151,10 +151,10 @@ Focus on:
 - What the data reveals
 - Key trends or patterns
 - Actionable recommendations""")
-    print("✅ Created: prompts/user/insights_generation.txt")
+    print(" Created: prompts/user/insights_generation.txt")
     
     print("\n" + "="*50)
-    print("✅ All prompt templates created successfully!")
+    print(" All prompt templates created successfully!")
     print("="*50)
     print("\nCreated files:")
     print("  prompts/system/system_prompt.txt")

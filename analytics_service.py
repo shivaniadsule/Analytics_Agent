@@ -4,14 +4,6 @@ from pathlib import Path
 from llm_client import LLMClient
 
 class AnalyticsService:
-    """
-    Analytics Service - Coordinates the full pipeline:
-    1. Analyze user query (using Groq)
-    2. Generate SQL (using Groq)
-    3. Validate SQL (safety checks)
-    4. Execute SQL (on your database)
-    5. Generate insights (using Groq)
-    """
     
     def __init__(self, db_path: str = "kaggle_transactions.sqlite"):
         """
@@ -25,19 +17,15 @@ class AnalyticsService:
         self.table_structure = self._load_table_structure()
         self.business_logic = self._load_business_logic()
         
-        print(f"📊 Analytics Service initialized")
+        print(f"Analytics Service initialized")
         print(f"   Database: {db_path}")
     
     def _load_table_structure(self) -> str:
-        """
-        Load database schema (tables, columns, types).
-        This is automatically sent to Groq so it knows your database structure.
-        """
+        
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Get all tables
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
             tables = cursor.fetchall()
             
@@ -65,11 +53,11 @@ class AnalyticsService:
                 structure += f"\nTotal rows: {count:,}\n\n"
             
             conn.close()
-            print(f"   ✅ Loaded database schema")
+            print(f"    Loaded database schema")
             return structure
             
         except Exception as e:
-            print(f"   ⚠️  Could not load database schema: {e}")
+            print(f"    Could not load database schema: {e}")
             return "Database schema not available"
     
     def _load_business_logic(self) -> str:
@@ -80,7 +68,7 @@ class AnalyticsService:
                 with open(logic_path, 'r') as f:
                     return f.read()
         except Exception as e:
-            print(f"   ⚠️  Could not load business logic: {e}")
+            print(f"     Could not load business logic: {e}")
         
         return "No specific business logic defined"
     
@@ -99,18 +87,18 @@ class AnalyticsService:
         cursor = conn.cursor()
         
         try:
-            print(f"\n📊 Executing SQL query...")
+            print(f"\n Executing SQL query...")
             cursor.execute(sql)
             rows = cursor.fetchall()
             
             # Convert to list of dicts
             results = [dict(row) for row in rows]
             
-            print(f"✅ Retrieved {len(results)} rows")
+            print(f" Retrieved {len(results)} rows")
             return results
             
         except Exception as e:
-            print(f"❌ SQL execution failed: {str(e)}")
+            print(f" SQL execution failed: {str(e)}")
             raise Exception(f"SQL execution error: {str(e)}")
         finally:
             conn.close()
@@ -133,7 +121,7 @@ class AnalyticsService:
             Dict with all results (analysis, sql, data, insights)
         """
         print("\n" + "="*60)
-        print(f"📝 User Query: {user_query}")
+        print(f" User Query: {user_query}")
         print("="*60)
         
         try:
@@ -176,7 +164,7 @@ class AnalyticsService:
             )
             
             print("\n" + "="*60)
-            print("✅ ANALYSIS COMPLETE")
+            print("ANALYSIS COMPLETE")
             print("="*60)
             
             return {
@@ -190,7 +178,7 @@ class AnalyticsService:
             }
             
         except Exception as e:
-            print(f"\n❌ Analysis failed: {str(e)}")
+            print(f"\n Analysis failed: {str(e)}")
             return {
                 "success": False,
                 "error": str(e),
@@ -208,20 +196,20 @@ class AnalyticsService:
             Formatted text response
         """
         if not result.get("success"):
-            return f"❌ Error: {result.get('error', 'Unknown error occurred')}"
+            return f" Error: {result.get('error', 'Unknown error occurred')}"
         
         response = []
         
         # Add insights from Groq
         if result.get("insights"):
-            # response.append("📊 Insights:")
+            # response.append(" Insights:")
             response.append(result["insights"])
             response.append("")
         
         # Add data summary
         data_count = result.get("data_count", 0)
         if data_count > 0:
-            response.append(f"📈 Found {data_count} records")
+            response.append(f" Found {data_count} records")
             
             # Show sample of data
             data = result.get("data", [])
@@ -238,7 +226,7 @@ class AnalyticsService:
                 if data_count > 5:
                     response.append(f"  ... and {data_count - 5} more")
         else:
-            response.append("📭 No data found matching your criteria.")
+            response.append(" No data found matching your criteria.")
         
         # Add SQL query used (for transparency)
         # if result.get("sql"):
@@ -248,17 +236,9 @@ class AnalyticsService:
         return "\n".join(response)
 
 
-# Simple function for Flask to call
+
 def analytics_query(user_query: str) -> str:
-    """
-    Simple wrapper function that Flask app.py will call.
     
-    Args:
-        user_query: User's question
-        
-    Returns:
-        Formatted response text
-    """
     service = AnalyticsService()
     result = service.analyze_query_full(user_query)
     return service.format_response(result)

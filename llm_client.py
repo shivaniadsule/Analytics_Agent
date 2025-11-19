@@ -6,29 +6,25 @@ from typing import Dict, Any, List
 from pathlib import Path
 
 class LLMClient:
-    """
-    LLM client for Groq API.
-    Handles all AI interactions for analytics.
-    """
     
     def __init__(self):
-        """Initialize Groq client."""
+
         self.api_key = os.getenv("GROQ_API_KEY")
-        self.model = "llama-3.3-70b-versatile"  # Updated to current model
+        self.model = "llama-3.3-70b-versatile"  
         self.base_url = "https://api.groq.com/openai/v1"
         self.prompts_cache = {}
         self.prompts_dir = Path("prompts")
         
         if not self.api_key:
             raise ValueError(
-                "❌ GROQ_API_KEY not found!\n"
+                " GROQ_API_KEY not found!\n"
                 "Set it: export GROQ_API_KEY='your_key_here'"
             )
         
-        print(f"🤖 Groq AI initialized with model: {self.model}")
+        print(f" Groq AI initialized with model: {self.model}")
     
     def load_prompt(self, prompt_type: str, category: str = "system") -> str:
-        """Load prompt template from file."""
+        
         cache_key = f"{category}_{prompt_type}"
         
         if cache_key in self.prompts_cache:
@@ -46,7 +42,7 @@ class LLMClient:
         return content
     
     def load_prompt_with_auto_split(self, prompt_type: str, **variables) -> Dict[str, str]:
-        """Load system and user prompts and inject variables."""
+        
         try:
             system_prompt = self.load_prompt(prompt_type, "system")
             user_prompt = self.load_prompt(prompt_type, "user")
@@ -54,7 +50,7 @@ class LLMClient:
             system_prompt = self.load_prompt("system_prompt", "system")
             user_prompt = "Query: {query}"
         
-        # Replace {placeholders} with actual values
+        
         system_prompt = self._inject_variables(system_prompt, variables)
         user_prompt = self._inject_variables(user_prompt, variables)
         
@@ -69,18 +65,9 @@ class LLMClient:
         return template
     
     def generate_response(self, system_prompt: str, user_prompt: str) -> str:
-        """
-        Call Groq API to generate response.
         
-        Args:
-            system_prompt: Instructions for the AI
-            user_prompt: The actual question/request
-            
-        Returns:
-            AI's response text
-        """
         try:
-            print(f"💭 Calling Groq API...")
+            print(f" Calling Groq API...")
             
             response = requests.post(
                 f"{self.base_url}/chat/completions",
@@ -104,22 +91,21 @@ class LLMClient:
             data = response.json()
             
             result = data["choices"][0]["message"]["content"].strip()
-            print(f"✅ Got response ({len(result)} characters)")
+            print(f" Got response ({len(result)} characters)")
             
             return result
             
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
-                raise Exception("❌ Invalid Groq API key! Check your GROQ_API_KEY")
+                raise Exception(" Invalid Groq API key! Check your GROQ_API_KEY")
             elif e.response.status_code == 429:
-                raise Exception("❌ Groq rate limit reached. Wait a minute and try again.")
+                raise Exception(" Groq rate limit reached. Wait a minute and try again.")
             else:
-                raise Exception(f"❌ Groq API error: {str(e)}")
+                raise Exception(f" Groq API error: {str(e)}")
         except Exception as e:
-            raise Exception(f"❌ Groq API call failed: {str(e)}")
+            raise Exception(f" Groq API call failed: {str(e)}")
     
     def parse_json_response(self, response: str) -> Dict[str, Any]:
-        """Parse JSON from AI response."""
         # Remove markdown code blocks
         response = re.sub(r'```json\s*', '', response)
         response = re.sub(r'```\s*', '', response)
@@ -139,17 +125,7 @@ class LLMClient:
             raise ValueError(f"Failed to parse JSON from response")
     
     def analyze_query(self, query: str, table_structure: str, business_logic: str = "") -> Dict[str, Any]:
-        """
-        STEP 1: Analyze user query to understand intent.
         
-        Args:
-            query: User's question
-            table_structure: Database schema
-            business_logic: Business rules
-            
-        Returns:
-            Analysis JSON: {type, intent, columns, analysis_type, confidence}
-        """
         print("\n" + "="*60)
         print("STEP 1: Analyzing Query")
         print("="*60)
@@ -165,10 +141,10 @@ class LLMClient:
         
         try:
             analysis = self.parse_json_response(response)
-            print(f"✅ Analysis: {analysis}")
+            print(f" Analysis: {analysis}")
             return analysis
         except ValueError:
-            print(f"⚠️  JSON parsing failed, using fallback")
+            print(f"  JSON parsing failed, using fallback")
             return self._fallback_query_analysis(query)
     
     def _fallback_query_analysis(self, query: str) -> Dict[str, Any]:
@@ -211,12 +187,11 @@ class LLMClient:
         response = self.generate_response(prompts["system"], prompts["user"])
         sql = self._extract_sql(response)
         
-        print(f"✅ Generated SQL:\n{sql}\n")
+        print(f" Generated SQL:\n{sql}\n")
         
         return {"sql": sql, "explanation": response}
     
     def _extract_sql(self, response: str) -> str:
-        """Extract SQL from AI response."""
         # Look for ```sql code blocks
         sql_match = re.search(r'```sql\s*(.*?)\s*```', response, re.DOTALL | re.IGNORECASE)
         if sql_match:
@@ -243,24 +218,24 @@ class LLMClient:
         errors = []
         sql_upper = sql.upper().strip()
         
-        # Must start with SELECT
+       
         if not (sql_upper.startswith('SELECT') or sql_upper.startswith('WITH')):
             errors.append("Query must start with SELECT")
         
-        # No dangerous keywords
+       
         dangerous = ['DROP', 'DELETE', 'TRUNCATE', 'ALTER', 'CREATE', 'INSERT', 'UPDATE']
         for keyword in dangerous:
             if keyword in sql_upper:
                 errors.append(f"Dangerous keyword: {keyword}")
         
-        # Balanced parentheses
+        
         if sql.count('(') != sql.count(')'):
             errors.append("Unbalanced parentheses")
         
         if errors:
-            print(f"❌ Validation failed: {errors}")
+            print(f" Validation failed: {errors}")
         else:
-            print("✅ SQL validation passed")
+            print(" SQL validation passed")
         
         return {"valid": len(errors) == 0, "errors": errors}
     
@@ -285,7 +260,7 @@ class LLMClient:
         )
         
         insights = self.generate_response(prompts["system"], prompts["user"])
-        print(f"✅ Generated insights")
+        print(f" Generated insights")
         
         return insights
     
